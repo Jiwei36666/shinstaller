@@ -1,0 +1,45 @@
+#!/bin/bash
+
+function untar_payload()
+{
+        match=$(grep --text --line-number '^PAYLOAD:$' $0 | cut -d ':' -f 1)
+        payload_start=$((match + 1))
+        tail -n +$payload_start $0 | uudecode | tar -xvzf - -C / >> eds_install.log 2>&1
+}
+
+function clean_eds()
+{
+        rm -rf /usr/local/bin/{puppet.sh,k8s.sh,startup.sh,mq-agent,env.sh,cert-agent,kubelet}
+        rm -rf /etc/kubernetes/
+        rm -rf /etc/puppetlabs/
+}
+
+
+if [[ "$1" ]]; then
+        read -p "clean files? " ans
+        if [[ "${ans:0:1}"  ||  "${ans:0:1}" ]]; then
+                clean_eds >> eds_install.log 2>&1
+                echo "Success to remove edgescale client"
+        fi
+        exit 0
+fi
+
+echo `date` > eds_install.log
+
+read -p "Install files? " ans
+if [[ "${ans:0:1}"  ||  "${ans:0:1}" ]]; then
+        which puppet >> eds_install.log 2>&1
+        if [ $? -ne 0 ];then
+                echo "  Puppet is not installed, but it doens't matter!"
+        fi
+
+        untar_payload
+        if [ -f /usr/local/bin/cert-agent ];then
+                echo "Success to install edgescale client"
+        else
+                echo "Fail to install edgescale client"
+                exit 1
+        fi
+fi
+
+exit 0
